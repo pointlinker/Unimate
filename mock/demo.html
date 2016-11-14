@@ -1,0 +1,167 @@
+<html>
+	<script src="causality.js" type="text/javascript"></script>
+	<body bgcolor = white>
+
+			<textarea id="myTextarea" rows="5" cols="20">
+P = U * I
+U = R * I
+R = U / I
+I = U / R
+			</textarea>
+			<br>
+			<button type="button" onclick="validate_formula_update(this)">Update</button>
+			<br><hr>
+
+
+			P: <input type="number" id="P" name="P" onclick="clicked(this)" onkeydown="pressed(event, this)"> W<br><br>
+			U: <input type="number" id="U" name="P" onclick="clicked(this)" onkeydown="pressed(event, this)"> V<br><br>
+			R: <input type="number" id="R" name="P" onclick="clicked(this)" onkeydown="pressed(event, this)"> &#8486;<br><br>
+			I: <input type="number" id="I" name="P" onclick="clicked(this)" onkeydown="pressed(event, this)"> A<br><br>
+			<input type="checkbox" onClick="validate_select_output_by_double_click(this)">
+			Select output by double click<br>
+			<input type="checkbox" onClick="validate_clear_selected(this)">
+			Clear selected input field<br>
+
+
+		<script>
+
+				var d = document, checkForDoubleClick, input, output, timer;
+				var select_output_by_double_click = false, clear_selected = false;
+
+				function validate_select_output_by_double_click(target) {
+					if (output) output.disabled = false;
+					select_output_by_double_click = target.checked;
+					checkForDoubleClick = null;
+				}
+				function validate_clear_selected(target) {
+					clear_selected = target.checked;
+					checkForDoubleClick = null;
+				}
+				function validate_formula_update(target) {
+					alert("Not implemented!\nformulas can not be updated");
+				}
+
+				causality.install();
+
+				// För att kunna assigna NaN, när man är utanför en repeater
+				setCumulativeAssignment(true); // Activates some logic programming support
+
+/*
+				//test
+				//http://stackoverflow.com/questions/15313418/javascript-assert
+				function assert(condition, message) {
+					if (!condition) {
+			        message = message || "Assertion failed";
+			        message = typeof Error == "undefined"? message: new Error(message);
+			        alert(message);
+			        throw "Assertion: " + message;
+			    }
+				}
+				var test = create({U: NaN, I: NaN, R: NaN});
+				repeatOnChange(function(){
+					test.U = test.R * test.I;
+					test.R = test.U / test.I;
+					test.I = test.U / test.R;
+				});
+				test.U = NaN; test.I = 3; test.R = 2; assert(test.U + test.I + test.R == 11);
+				test.U = 6; test.I = NaN; test.R = 2; assert(test.U + test.I + test.R == 11);
+				test.U = 6; test.I = 3; test.R = NaN; assert(test.U + test.I + test.R == 11);
+				transaction(function() { test['I'] = NaN; test['R'] = 3; });
+				assert(test.U + test.I + test.R == 11);
+*/
+
+				var react = create({P: NaN, U: NaN, R: NaN, I: NaN});
+
+				repeatOnChange(function(){
+					react.P = react.U * react.I;
+					react.U = react.R * react.I;
+					react.R = react.U / react.I;
+					react.I = react.U / react.R;
+
+//				react.U = react.P / react.I;
+//				react.I = react.P / react.U;
+				});
+
+				function pressed(event, target){
+						//http://www.w3schools.com/jsref/event_key_which.asp
+						var keyCode = event.which || event.keyCode;
+						if (keyCode == '8') return false; //delete
+				    if (keyCode == '13') {
+							update();
+				      return false;
+				    }
+						input = target;
+						checkForDoubleClick = null;
+						clearTimeout(timer);
+						timer = setTimeout(update, 500);
+						return false;
+			  }
+
+				function clicked(target){
+					if (clear_selected) target.value = "";
+					if (select_output_by_double_click && output && checkForDoubleClick === target) {
+						output.disabled = false;
+						output = target;
+						output.disabled = true;
+					}
+					checkForDoubleClick = target;
+		    }
+
+				function clear(id) {
+					d.getElementById(id).value = "";
+				}
+
+				function fix(id){
+					var e = d.getElementById(id);
+					if (e == input) return;
+					e.value = parseFloat(react[id]).toFixed(2);
+				}
+
+				function fixOutput(){
+					fix("P"); fix("U"); fix("R"); fix("I");
+				}
+
+				function update() {
+					var nrOfEmpty = 0, theEmpty;
+					var e = d.getElementById("P");
+					if (e.value == "") { nrOfEmpty++; theEmpty = e; }
+					e = d.getElementById("U");
+					if (e.value == "") { nrOfEmpty++; theEmpty = e; }
+					e = d.getElementById("R");
+					if (e.value == "") { nrOfEmpty++; theEmpty = e; }
+					e = d.getElementById("I");
+					if (e.value == "") { nrOfEmpty++; theEmpty = e; }
+
+					if (nrOfEmpty > 1) return false;
+
+					if (nrOfEmpty == 0) { //Some has to be output (as NaN)?
+						if (select_output_by_double_click) clear(output.id);
+						else {
+							if (input.id === "P") clear("R");
+							if (input.id === "U") clear("R");
+							if (input.id === "R") clear("P");
+							if (input.id === "I") clear("R");
+						}
+					}
+
+					function set(x) {
+						var e = d.getElementById(x);
+						react[x] = e.value.length? e.value: NaN;
+					}
+
+					transaction(function() {
+						set("P"); set("U"); set("R"); set("I");
+					})
+
+					if (nrOfEmpty == 1 && !output) {
+						output = theEmpty;
+						if (select_output_by_double_click) output.disabled = true;
+					}
+					fixOutput();
+		    }
+
+		</script>
+
+	</body>
+
+</html>
